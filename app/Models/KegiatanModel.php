@@ -15,6 +15,7 @@ class KegiatanModel extends Model
         'tanggal_kegiatan',
         'waktu',
         'lokasi',
+        'komentar',
         'status_kegiatan',
         'proposal_file',
         'id_proker',
@@ -34,7 +35,8 @@ class KegiatanModel extends Model
                 kegiatan.judul_kegiatan,
                 kegiatan.tanggal_kegiatan,
                 kegiatan.waktu,
-                kegiatan.lokasi,
+                kegiatan.lokasi, 
+                kegiatan.komentar
                 kegiatan.proposal_file,
                 dokumentasi.link_drive,
                 kegiatan.status_kegiatan

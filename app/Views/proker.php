@@ -39,6 +39,7 @@
                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Deskripsi Proker</th>
                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Tanggal Pelaksanaan</th>
                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
+                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Komentar</th>
                         <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Aksi</th>
                         <th></th>
                         </tr>
@@ -76,7 +77,13 @@
                             ?>
                             <span class="<?= $badgeClass ?>"><?= $status ?></span>
                         </td>
-
+                        <td>
+                            <?php if ($value->komentar): ?>
+                                <?= $value->komentar ?>
+                            <?php else: ?>  
+                                <span class="badge bg-secondary">Belum ada</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                         <a href="<?= base_url('home/editproker/'.$value->id_proker)?>" class="btn btn-warning" onclick="return confirm('Apakah Anda yakin ingin mengedit data ini?')">
                         <i class="material-symbols-rounded opacity-100">border_color</i>

@@ -19,7 +19,7 @@ use App\Models\M_absensiswa;
 use App\Models\M_libur;
 use App\Models\M_absenguru;
 use App\Models\M_dokumentasi;
-
+use App\Models\M_LPJ;
 use App\Models\M_log;
 use App\Models\M_softdelete;
 use App\Models\KeuanganModel;
@@ -452,7 +452,7 @@ class Home extends BaseController
 			  $where=('id_proker');
 			  $wendy = [
 				  'title' => 'Data Proker',
-				  'anjas' => $joyce->tampil('proker', $where),
+				  'anjas' => $joyce->proker(),
 				  'showWelcome' => false 
 			  ];
 			  if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7) {
@@ -589,13 +589,15 @@ class Home extends BaseController
 	{
 		if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7  || session()->get('level')== 8  || session()->get('level')== 9 )  {
 			$joyce= new M_absen;
-			
+			$nana = new M_LPJ;
+
 				$apel['mey']=$joyce->settings();
 
 			  	$where=('id_kegiatan');
 			  	$wendy = [
 				  'title' => 'Data Kegiatan',
-				  'anjas' => $joyce->join('kegiatan', 'proker', 'kegiatan.id_proker = proker.id_proker'),
+				  'anjas' => $joyce->kegiatan(),
+				  'lpj' => $nana->getByIdKegiatan($id_kegiatan),
 				  'showWelcome' => false 
 			  ];
 			  if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7) {
@@ -659,11 +661,10 @@ class Home extends BaseController
 			"deskripsi_proker" => $b,
 			"tanggal_pelaksanaan" => $c, 
 			"status" => $f,
-			"updated_by" => $userID, // Tambahkan updated_by
-			"updated_at" => date('Y-m-d H:i:s') // Tambahkan updated_at
+			"updated_by" => $userID, 
+			"updated_at" => date('Y-m-d H:i:s') 
 		];
 
-		// Simpan log aktivitas
 		helper('log');
 		log_activity($userID, "Mengedit data proker: " . $a . " dengan ID Proker: " . $d);
 
@@ -698,7 +699,7 @@ class Home extends BaseController
 	{
 		$model = new M_absen();
 		$session = session();
-		$userID = $session->get('id'); // ID user yang login
+		$userID = $session->get('id'); 
 		$proposal = $this->request->getFile('proposal_file');
 		if (!$proposal->isValid() || $proposal->getClientMimeType() !== 'application/pdf') {
 			return redirect()->back()->with('error', 'File proposal harus berupa PDF.');
@@ -714,15 +715,14 @@ class Home extends BaseController
         'lokasi'            => $this->request->getPost('lokasi'),
         'proposal_file'     => $newName,
         'status_kegiatan'            => 'Menunggu persetujuan',
-		"created_by" => $userID, // Tambahkan updated_by
-		"created_at" => date('Y-m-d H:i:s') // Tambahkan updated_at
+		"created_by" => $userID,
+		"created_at" => date('Y-m-d H:i:s')
     ];
 		
 		$model->input('kegiatan', $data);
-		$id_user = $model->insertID(); // Ambil ID user yg baru
+		$id_user = $model->insertID(); 
 
 		
-		// Simpan log aktivitas
 		helper('log');
 		log_activity($userID, "User " . $id_user ."Menambahkan Kegiatan Bernama: " . $nama);
 
@@ -760,13 +760,12 @@ class Home extends BaseController
 	}
 	public function tolakproposal($id)
 	{
-		$prokerModel = new ProkerModel(); // Pastikan ini sesuai model kamu
+		$prokerModel = new ProkerModel(); 
 
-		$model = new KegiatanModel(); // Pastikan ini sesuai model kamu
+		$model = new KegiatanModel();
 		$session = session();
 		$userID = $session->get('id');
 
-		// Update status jadi Ditolak
 		$model->update($id, [
 			'status_kegiatan' => 'Ditolak',
 			'updated_by' => $userID,
@@ -777,13 +776,62 @@ class Home extends BaseController
 			'updated_at' => date('Y-m-d H:i:s'),
 			'updated_by' => $userID,
 		]);
-		// Log aktivitas
 		helper('log');
 		log_activity($userID, "Menolak proposal kegiatan ID: $id");
 
 		return redirect()->back()->with('success', 'Proposal berhasil ditolak.');
 	}
-
+	public function proses_kegiatan($id)
+	{
+		$kegiatanModel = new \App\Models\KegiatanModel();
+		$prokerModel   = new \App\Models\ProkerModel();
+		$session       = session();
+		$userID        = $session->get('id');
+	
+		$aksi = $this->request->getPost('aksi');
+		$komentar = $this->request->getPost('komentar');
+	
+		$kegiatan = $kegiatanModel->find($id);
+		if (!$kegiatan) {
+			return redirect()->back()->with('error', 'Kegiatan tidak ditemukan.');
+		}
+	
+		// Simpan komentar dan aksi
+		$updateKegiatan = [
+			'komentar'     => $komentar,
+			'updated_at'   => date('Y-m-d H:i:s'),
+			'updated_by'   => $userID
+		];
+		$updateProker = [
+			'komentar'     => $komentar,
+			'updated_at'   => date('Y-m-d H:i:s'),
+			'updated_by'   => $userID
+		];
+	
+		if ($aksi === 'setujui') {
+			$updateKegiatan['status_kegiatan'] = 'Berjalan';
+			$pesan = 'Proposal telah disetujui dan status diubah jadi Berjalan.';
+		} elseif ($aksi === 'tolak') {
+			$updateKegiatan['status_kegiatan'] = 'Ditolak';
+			$updateProker['status'] = 'Tidak Terlaksana';
+			$pesan = 'Proposal telah ditolak.';
+		} elseif ($aksi === 'selesai') {
+			$updateKegiatan['status_kegiatan'] = 'Selesai';
+			$updateProker['status'] = 'Terlaksana';
+			$pesan = 'Kegiatan diselesaikan dan status proker diubah menjadi Terlaksana.';
+		} else {
+			return redirect()->back()->with('error', 'Aksi tidak valid.');
+		}
+	
+		$kegiatanModel->update($id, $updateKegiatan);
+		$prokerModel->update($kegiatan['id_proker'], $updateProker);
+	
+		helper('log');
+		log_activity($userID, "Melakukan aksi [$aksi] pada kegiatan ID: $id");
+	
+		return redirect()->to('/home/kegiatan')->with('success', $pesan);
+	}
+	
 	public function selesaikankegiatan($id)
 	{
 		$kegiatanModel = new \App\Models\KegiatanModel();
@@ -820,38 +868,83 @@ class Home extends BaseController
 		return redirect()->to('/home/kegiatan')->with('success', 'Kegiatan diselesaikan dan status Proker diubah menjadi Terlaksana.');
 	}
 	
-	public function selesaikan()
+	public function proses_lpj($id_kegiatan)
 	{
-		$kegiatanModel = new KegiatanModel();
-		$prokerModel = new ProkerModel();
-		$dokumentasiModel = new DokumentasiModel();
-	
-		$id_kegiatan = $this->request->getPost('id_kegiatan');
-		$id_proker   = $this->request->getPost('id_proker');
-	
-		// 1. Update status kegiatan jadi "Selesai"
-		$kegiatanModel->update($id_kegiatan, ['status_kegiatan' => 'Selesai']);
-	
-		// 2. Update status proker jadi "Terlaksana"
-		$prokerModel->update($id_proker, ['status' => 'Terlaksana']);
-	
-		// 3. Simpan dokumentasi
-		$dataDokumentasi = [
-			'judul_dokumentasi' => $this->request->getPost('judul_dokumentasi'),
-			'link_drive'        => $this->request->getPost('link_drive'),
-			'kategori'          => $this->request->getPost('kategori'),
-			'bulan'             => $this->request->getPost('bulan'),
-			'tahun'             => $this->request->getPost('tahun'),
-		];
-		$id_dokumentasi = $dokumentasiModel->insert($dataDokumentasi); // ambil ID dokumentasi yang baru diinsert
+		$lpjModel      = new \App\Models\M_LPJ();
+		$kegiatanModel = new \App\Models\KegiatanModel();
+		$prokerModel   = new \App\Models\ProkerModel();
+		$session       = session();
+		$userID        = $session->get('id');
 
+	
+		$tipe       = $this->request->getPost('tipe');
+		$jumlah     = $this->request->getPost('jumlah');
+		$sumber     = $this->request->getPost('sumber');
+		$penggunaan = $this->request->getPost('penggunaan');
+		$files = $this->request->getFiles()['bukti'];
+		$tanggal = $this->request->getPost('tanggal');
+	
+		if (empty($tipe) || !is_array($tipe) || count($tipe) < 1) {
+			return redirect()->back()->with('error', 'Minimal 1 data LPJ harus diisi.');
+		}
+	
+	$dataBatch = [];
+	
+	for ($i = 0; $i < count($tipe); $i++) {
+		$namaFile = null;
+
+		// Upload jika ada file
+		if (isset($files[$i]) && $files[$i]->isValid() && !$files[$i]->hasMoved()) {
+			$namaFile = $files[$i]->getRandomName();
+			$files[$i]->move('img/', $namaFile);
+		}
+		$dataBatch[] = [
+			'id_kegiatan' => $id_kegiatan,
+			'tipe'        => $tipe[$i],
+			'jumlah'      => $jumlahBersih = str_replace('.', '', $jumlah[$i]), 
+			'sumber'      => ($tipe[$i] === 'Pemasukan') ? $sumber[$i] : null,
+			'penggunaan'  => ($tipe[$i] === 'Pengeluaran') ? $penggunaan[$i] : null,
+			'bukti'       => $namaFile,
+        	'tanggal'     => $tanggal[$i],
+		];	
+	}
+	$result = $lpjModel->insertBatch($dataBatch);
+
+	// echo '<pre>';
+	// print_r($dataBatch);
+	// echo '</pre>';
+	// exit;
+	
+	
 		$kegiatanModel->update($id_kegiatan, [
 			'status_kegiatan' => 'Selesai',
-			'id_dokumentasi' => $id_dokumentasi
+			'updated_at'      => date('Y-m-d H:i:s'),
+			'updated_by'      => $userID,
 		]);
 	
-		return redirect()->to('/home/kegiatan')->with('success', 'Kegiatan diselesaikan dan dokumentasi berhasil diinput.');
-	}	
+		$kegiatan = $kegiatanModel->find($id_kegiatan);
+	
+		$prokerModel->update($kegiatan['id_proker'], [
+			'status'      => 'Terlaksana',
+			'updated_at'  => date('Y-m-d H:i:s'),
+			'updated_by'  => $userID,
+		]);
+	
+		helper('log');
+		log_activity($userID, "Menginput LPJ untuk kegiatan ID: $id");
+	
+		return redirect()->to('/home/kegiatan')->with('success', 'LPJ berhasil disimpan dan status kegiatan diperbarui.');
+	}
+	public function perKegiatan($id_kegiatan)
+	{
+		$model = new M_LPJ();
+		$joyce = new M_absen();
+		$data['lpj'] = $model->getByIdKegiatan($id_kegiatan);
+		$data['id_kegiatan'] = $id_kegiatan;
+		$apel['mey']=$joyce->settings();
+		echo view('header', $apel);
+		echo view('lpjactivity', $data);
+	}
 	public function proposal()
 	{
 		if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7  || session()->get('level')== 8  || session()->get('level')== 9 )  {
@@ -978,179 +1071,427 @@ class Home extends BaseController
 
 	public function keuangan()
 	{
-		if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7  || session()->get('level')== 8  || session()->get('level')== 9 )  {
-			$bulan = $this->request->getGet('bulan');
-			$joyce= new M_absen; 
-		$lala= new KeuanganModel;
-		$apel['mey']=$joyce->settings();
-
-		if ($bulan) {
-			$keuangan = $lala->where('MONTH(tanggal)', date('m', strtotime($bulan)))
-							 ->where('YEAR(tanggal)', date('Y', strtotime($bulan)))
-							 ->findAll();
+		if (in_array(session()->get('level'), range(1, 9))) {
+			$bulan_awal = $this->request->getGet('bulan_awal');  // format YYYY-MM
+			$bulan_akhir = $this->request->getGet('bulan_akhir');
+						$id_kegiatan = $this->request->getGet('id_kegiatan');
+	
+			$joyce = new M_absen;
+			$keuanganModel = new KeuanganModel;
+	
+			// Ambil pengaturan
+			$dataHeader['mey'] = $joyce->settings();
+	
+			// Ambil semua kegiatan buat dropdown
+			$db = \Config\Database::connect();
+			$data['kegiatan'] = $db->table('kegiatan')->where('deleted_at', null)->get()->getResultArray();
+	
+			// Mulai query builder
+			$builder = $keuanganModel->where('deleted_at', null);
+	
+			// Filter bulan (format YYYY-MM)
+			if ($bulan_awal && $bulan_akhir) {
+				$builder->where('DATE_FORMAT(tanggal, "%Y-%m") >=', $bulan_awal)
+						->where('DATE_FORMAT(tanggal, "%Y-%m") <=', $bulan_akhir);
+			}
+			
+	
+			// Filter berdasarkan kegiatan
+			if (!empty($id_kegiatan)) {
+				$builder = $builder->where('id_kegiatan', $id_kegiatan);
+			}
+	
+			// Ambil data keuangan yang sudah difilter
+			$keuangan = $builder->orderBy('tanggal', 'DESC')->findAll();
+	
+			// Hitung total pemasukan dan pengeluaran
+			$totalPemasukan = 0;
+			$totalPengeluaran = 0;
+	
+			foreach ($keuangan as $row) {
+				if ($row['tipe'] === 'Pemasukan') {
+					$totalPemasukan += $row['jumlah'];
+				} elseif ($row['tipe'] === 'Pengeluaran') {
+					$totalPengeluaran += $row['jumlah'];
+				}
+			}
+	
+			$data['keuangan'] = $keuangan;
+			$data['bulan_awal'] = $bulan_awal;
+			$data['bulan_akhir'] = $bulan_akhir;
+			$data['id_kegiatan'] = $id_kegiatan;
+			$data['totalKas'] = $totalPemasukan - $totalPengeluaran;
+			$data['totalPemasukan'] = $totalPemasukan;
+			$data['totalPengeluaran'] = $totalPengeluaran;
+		
+			// Ambil profil user
+			if (in_array(session()->get('level'), range(1, 7))) {
+				$where = ['anggota.id_user' => session()->get('id')];
+				$dataUser['prof'] = $joyce->jwhere1('user', 'anggota', 'user.id_user=anggota.id_user', $where);
+			} else {
+				$where = ['id_user' => session()->get('id')];
+				$dataUser['prof'] = $joyce->getWhere('user', $where);
+			}
+	
+			// Gabung semua data ke view
+			$headerData = array_merge($dataHeader, $dataUser);
+			echo view('header', $headerData);
+			echo view('keuangan', $data);
+			echo view('footer');
+	
+			helper('log');
+			log_activity(session()->get('id'), 'Mengakses halaman data Keuangan');
+	
+		} else if (session()->get('level') > 0) {
+			return redirect()->to('home/error');
 		} else {
-			$keuangan = $lala->findAll();
+			return redirect()->to('home/login');
 		}
-		
-		// Hitung total kas
-		$totalPemasukan = 0;
-		$totalPengeluaran = 0;
-		
-		foreach ($keuangan as $row) {
-			if ($row['tipe'] === 'Pemasukan') {
-				$totalPemasukan += $row['jumlah'];
-			} elseif ($row['tipe'] === 'Pengeluaran') {
-				$totalPengeluaran += $row['jumlah'];
-			}
-		}
-		
-		$data['keuangan'] = $keuangan;
-		$data['bulan'] = $bulan;
-		$data['totalKas'] = $totalPemasukan - $totalPengeluaran;
-		$data['totalPemasukan'] = $totalPemasukan;
-		$data['totalPengeluaran'] = $totalPengeluaran;
-		
-			  if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7) {
-				$where=array('anggota.id_user' => session()->get('id'));
-				$hee['prof']=$joyce->jwhere1('user', 'anggota', 'user.id_user=anggota.id_user',$where);
-			}else if (session()->get('level')==8 || session()->get('level')== 9) {
-				$where=array('id_user' => session()->get('id'));
-				$hee['prof']=$joyce->getWhere('user', $where);
-			}
-
-		$hm = array_merge($apel, $hee);
-			echo view('header',$hm);
-		echo view('keuangan',$data);
-		echo view('footer');
-		helper('log');
-		  log_activity(session()->get('id'), 'Mengakses halaman data Keuangan');
-	  }else if(session()->get('level')>0){
-		return redirect()->to('home/error');
-	  }else{
-		return redirect()->to('home/login');
-	  }
 	}
-	public function inputkeuangan ()
-	{
-		$joyce= new M_absen;
-		$where=('id_keuangan');
-		$wendy['anjas']=$joyce->tampil('keuangan',$where);
-		$apel['mey']=$joyce->settings();
+	
 
-		if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7) {
-			$where=array('anggota.id_user' => session()->get('id'));
-			$hee['prof']=$joyce->jwhere1('user', 'anggota', 'user.id_user=anggota.id_user',$where);
-		}else if (session()->get('level')==8 || session()->get('level')== 9) {
-			$where=array('id_user' => session()->get('id'));
-			$hee['prof']=$joyce->getWhere('user', $where);
-		}
+public function inputkeuangan()
+{
+    $joyce = new M_absen;
+    
+    // Mengambil data keuangan berdasarkan ID
+    $where = ('id_keuangan');
+    $wendy['anjas'] = $joyce->tampil('keuangan', $where);
+    
+    // Mengambil data settings
+    $apel['mey'] = $joyce->settings();
 
-			$data = array_merge($apel, $hee);
-			echo view('header',$data);
-		echo view('inputkeuangan', $wendy);
-		echo view('footer');
+    // Ambil data kegiatan yang belum dihapus (deleted_at null)
+    $db = \Config\Database::connect();
+    $data['kegiatan'] = $db->table('kegiatan')->where('deleted_at', null)->get()->getResultArray();
+    $wendy['kegiatan'] = $data['kegiatan'];  // Mengirimkan data kegiatan ke view
 
-	}
+    if (session()->get('level') == 1 || session()->get('level') == 2 || session()->get('level') == 3 || session()->get('level') == 4 || session()->get('level') == 5 || session()->get('level') == 6 || session()->get('level') == 7) {
+        $where = array('anggota.id_user' => session()->get('id'));
+        $hee['prof'] = $joyce->jwhere1('user', 'anggota', 'user.id_user=anggota.id_user', $where);
+    } else if (session()->get('level') == 8 || session()->get('level') == 9) {
+        $where = array('id_user' => session()->get('id'));
+        $hee['prof'] = $joyce->getWhere('user', $where);
+    }
+
+    // Menggabungkan data untuk view
+    $data = array_merge($apel, $hee, $wendy); // Menambahkan $wendy ke array data
+    echo view('header', $data);
+    echo view('inputkeuangan', $data);  // Menggunakan $data untuk dikirim ke view
+    echo view('footer');
+}
+
 	public function savekeuangan()
 	{
 		$session = session();
-		$userID = $session->get('id'); // ID user yang login
-		
-		$file         = $this->request->getFile('file');
-		$tanggal         = $this->request->getPost('tanggal');
-		$keterangan     = $this->request->getPost('keterangan');
+		$userID = $session->get('id');
+	
+		$file        = $this->request->getFile('file');
+		$tanggal     = $this->request->getPost('tanggal');
+		$keterangan  = $this->request->getPost('keterangan');
 		$jumlah      = $this->request->getPost('jumlah');
-		$tipe  = $this->request->getPost('tipe');
-		$createdAt    = date('Y-m-d H:i:s');
-
-		// Upload foto
+		$tipe        = $this->request->getPost('tipe');
+		$jenis       = $this->request->getPost('jenis');
+		$id_kegiatan = $this->request->getPost('id_kegiatan'); // bisa kosong kalau jenis == Umum
+		$createdAt   = date('Y-m-d H:i:s');
+	
+		// Validasi jika jenis Kegiatan tapi tidak ada id_kegiatan
+		if ($jenis === 'Kegiatan' && empty($id_kegiatan)) {
+			return redirect()->back()->with('error', 'Silakan pilih kegiatan jika jenis adalah Kegiatan.');
+		}
+	
+		// Upload nota
 		$newFileName = '';
 		if ($file->isValid() && !$file->hasMoved()) {
 			$newFileName = time() . '_' . $file->getClientName();
 			$file->move('img/', $newFileName);
 		}
-
+	
 		$model = new M_absen();
-
+	
 		$dataUser = [
-			'nota'       => $newFileName,
-			'tanggal'   => $tanggal,
-			'keterangan'   => $keterangan,
+			'jenis'       => $jenis,
+			'id_kegiatan' => ($jenis === 'Kegiatan') ? $id_kegiatan : null,
+			'nota'        => $newFileName,
+			'tanggal'     => $tanggal,
+			'keterangan'  => $keterangan,
 			'jumlah'      => $jumlah,
-			'tipe'      => $tipe,
-			'created_at' => $createdAt,
-			'created_by' => $userID,
+			'tipe'        => $tipe,
+			'created_at'  => $createdAt,
+			'created_by'  => $userID,
 		];
+	
 		$model->input('keuangan', $dataUser);
 	
 		helper('log');
-		log_activity($userID, "Menambahkan data " . $tipe . " dengan keterangan: " . $keterangan);
-
-		return redirect()->to('/home/keuangan'); // Ganti sesuai route kamu
+		log_activity($userID, "Menambahkan data $tipe - $jenis dengan keterangan: $keterangan");
+	
+		return redirect()->to('/home/keuangan')->with('success', 'Data keuangan berhasil disimpan.');
 	}
-
+	
 	public function exportExcel()
-	{
-		$bulan = $this->request->getGet('bulan');
-		$model = new KeuanganModel();
-	
-		if ($bulan) {
-			$data = $model->where('MONTH(tanggal)', date('m', strtotime($bulan)))
-						  ->where('YEAR(tanggal)', date('Y', strtotime($bulan)))
-						  ->findAll();
-		} else {
-			$data = $model->findAll();
-		}
-	
-		// Hitung total pemasukan dan pengeluaran
-		$totalPemasukan = 0;
-		$totalPengeluaran = 0;
-	
-		foreach ($data as $row) {
-			if ($row['tipe'] === 'Pemasukan') {
-				$totalPemasukan += $row['jumlah'];
-			} elseif ($row['tipe'] === 'Pengeluaran') {
-				$totalPengeluaran += $row['jumlah'];
-			}
-		}
-	
-		$totalKas = $totalPemasukan - $totalPengeluaran;
-	
-		// Output Excel
-		header("Content-Type: application/vnd.ms-excel");
-		header("Content-Disposition: attachment; filename=Laporan_Keuangan.xls");
-	
-		echo "<table border='1'>";
-		echo "<tr><th colspan='4'><h2>Laporan Keuangan Kas OSIS</h2></th></tr>";
-		echo "<tr>
-				<th>Tanggal</th>
-				<th>Keterangan</th>
-				<th>Tipe</th>
-				<th>Jumlah</th>
-			  </tr>";
-	
-		foreach ($data as $row) {
-			echo "<tr>
-					<td>{$row['tanggal']}</td>
-					<td>{$row['keterangan']}</td>
-					<td>{$row['tipe']}</td>
-					<td>" . number_format($row['jumlah'], 0, ',', '.') . "</td>
-				  </tr>";
-		}
-	
-		// Baris kosong sebagai pemisah
-		echo "<tr><td colspan='4'></td></tr>";
-	
-		// Tambahkan total-total di bawah
-		echo "<tr><td colspan='3'><strong>Total Pemasukan</strong></td><td><strong>" . number_format($totalPemasukan, 0, ',', '.') . "</strong></td></tr>";
-		echo "<tr><td colspan='3'><strong>Total Pengeluaran</strong></td><td><strong>" . number_format($totalPengeluaran, 0, ',', '.') . "</strong></td>/tr>";
-		echo "<tr><td colspan='3'><strong>Total Kas OSIS</strong></td><td><strong>" . number_format($totalKas, 0, ',', '.') . "</strong></td></tr>";
-	
-		echo "</table>";
-		exit;
-	}
-	
+{
+    // Ambil filter dari URL query string
+    $bulan_awal = $this->request->getGet('bulan_awal');
+    $bulan_akhir = $this->request->getGet('bulan_akhir');
+    $id_kegiatan = $this->request->getGet('id_kegiatan');
 
+    // Menyiapkan database dan query builder
+    $db = \Config\Database::connect();
+    $builder = $db->table('keuangan')->where('deleted_at', null);
+
+    // Filter berdasarkan bulan
+    if ($bulan_awal && $bulan_akhir) {
+        $startDate = $bulan_awal . '-01';  // Menentukan awal bulan
+        $endDate = date('Y-m-t', strtotime($bulan_akhir));  // Menentukan akhir bulan
+        $builder->where('tanggal >=', $startDate)
+                ->where('tanggal <=', $endDate);
+    }
+
+    // Filter berdasarkan kegiatan
+    if ($id_kegiatan) {
+        $builder->where('id_kegiatan', $id_kegiatan);
+    }
+
+    // Ambil data yang sudah difilter
+    $data = $builder->orderBy('tanggal', 'ASC')->get()->getResultArray();
+
+    if (empty($data)) {
+        echo "Data kosong untuk filter yang diberikan.";
+        return;
+    }
+
+    // Excel output
+    header("Content-Type: application/vnd.ms-excel");
+    header("Content-Disposition: attachment; filename=Laporan_Keuangan.xls");
+
+    echo "<table border='1'>";
+    echo "<tr><th colspan='4'><h2>Laporan Keuangan Kas OSIS</h2></th></tr>";
+    echo "<tr><td colspan='4'><strong>Periode: " . $bulan_awal . " s.d. " . $bulan_akhir . "</strong></td></tr>";
+    echo "<tr><th>Tanggal</th><th>Keterangan</th><th>Pemasukan</th><th>Pengeluaran</th></tr>";
+
+    $totalPemasukan = 0;
+    $totalPengeluaran = 0;
+
+    foreach ($data as $row) {
+        $pemasukan = ($row['tipe'] === 'Pemasukan') ? number_format($row['jumlah'], 0, ',', '.') : '';
+        $pengeluaran = ($row['tipe'] === 'Pengeluaran') ? number_format($row['jumlah'], 0, ',', '.') : '';
+
+        if ($row['tipe'] === 'Pemasukan') $totalPemasukan += $row['jumlah'];
+        if ($row['tipe'] === 'Pengeluaran') $totalPengeluaran += $row['jumlah'];
+
+        echo "<tr>
+            <td>" . date('d-m-Y', strtotime($row['tanggal'])) . "</td>
+            <td>{$row['keterangan']}</td>
+            <td>{$pemasukan}</td>
+            <td>{$pengeluaran}</td>
+        </tr>";
+    }
+
+    echo "<tr><td colspan='4'></td></tr>";
+    echo "<tr><td colspan='3'><strong>Total Pemasukan</strong></td><td><strong>" . number_format($totalPemasukan, 0, ',', '.') . "</strong></td></tr>";
+    echo "<tr><td colspan='3'><strong>Total Pengeluaran</strong></td><td><strong>" . number_format($totalPengeluaran, 0, ',', '.') . "</strong></td></tr>";
+    echo "<tr><td colspan='3'><strong>Total Kas OSIS</strong></td><td><strong>" . number_format($totalPemasukan - $totalPengeluaran, 0, ',', '.') . "</strong></td></tr>";
+    echo "</table>";
+    exit;
+}
+public function input_lpj($id_kegiatan)
+{
+    // Load model kegiatan dan data kegiatan
+    $kegiatanModel = new KegiatanModel();
+    $kegiatan = $kegiatanModel->find($id_kegiatan);
+    
+    if (!$kegiatan) {
+        throw new \CodeIgniter\Exceptions\PageNotFoundException('Kegiatan tidak ditemukan.');
+    }
+	$joyce= new M_absen;
+
+	$apel['mey']=$joyce->settings();
+
+	if (session()->get('level')==1 || session()->get('level')== 2 || session()->get('level')== 3 || session()->get('level')== 4 || session()->get('level')== 5 || session()->get('level')== 6 || session()->get('level')== 7) {
+		$where=array('anggota.id_user' => session()->get('id'));
+		$hee['prof']=$joyce->jwhere1('user', 'anggota', 'user.id_user=anggota.id_user',$where);
+	}else if (session()->get('level')==8 || session()->get('level')== 9) {
+		$where=array('id_user' => session()->get('id'));
+		$hee['prof']=$joyce->getWhere('user', $where);
+	}
+
+		$data = array_merge($apel, $hee);
+		echo view('header',$data);
+    // Tampilkan halaman form LPJ
+	echo view('inputlpj', ['kegiatan' => $kegiatan]); // <-- ini benar
+}
+public function submit_lpj($id_kegiatan)
+{
+
+    $tipe = $this->request->getPost('tipe');
+    $jumlah = $this->request->getPost('jumlah');
+    $sumber = $this->request->getPost('sumber');
+    $penggunaan = $this->request->getPost('penggunaan');
+
+    // Validasi manual
+    $hasError = false;
+    $message = '';
+
+    for ($i = 0; $i < count($tipe); $i++) {
+        if (empty($tipe[$i]) || empty($jumlah[$i])) {
+            $hasError = true;
+            $message = 'Tipe dan jumlah wajib diisi.';
+            break;
+        }
+
+        if ($tipe[$i] == 'Pemasukan' && empty($sumber[$i])) {
+            $hasError = true;
+            $message = 'Sumber wajib diisi untuk tipe masuk.';
+            break;
+        }
+
+        if ($tipe[$i] == 'Pengeluaran' && empty($penggunaan[$i])) {
+            $hasError = true;
+            $message = 'Penggunaan wajib diisi untuk tipe keluar.';
+            break;
+        }
+    }
+
+    if ($hasError) {
+        return redirect()->back()->withInput()->with('error', $message);
+    }
+
+    // Simpan data ke database
+    $model = new M_LPJ();
+
+    for ($i = 0; $i < count($tipe); $i++) {
+        $model->save([
+            'id_kegiatan' => $id_kegiatan,
+            'tipe'        => $tipe[$i],
+            'jumlah'      => $jumlah[$i],
+            'sumber'      => $tipe[$i] == 'Pemasukan' ? $sumber[$i] : null,
+            'penggunaan'  => $tipe[$i] == 'Pengeluaran' ? $penggunaan[$i] : null,
+        ]);
+    }
+
+    return redirect()->to(base_url('home/kegiatan/' . $id_kegiatan))->with('success', 'Data LPJ berhasil disimpan.');
+}
+
+
+public function view($id_kegiatan)
+{
+    $kegiatanModel = new KegiatanModel();
+    $lpjModel = new LpjModel();
+    
+    // Ambil data kegiatan
+    $kegiatan = $kegiatanModel->find($id_kegiatan);
+    
+    if (!$kegiatan) {
+        throw new \CodeIgniter\Exceptions\PageNotFoundException('Kegiatan tidak ditemukan.');
+    }
+
+    // Ambil data LPJ jika sudah disubmit
+    $lpj = $lpjModel->where('id_kegiatan', $id_kegiatan)->first();
+
+    return view('home/view', [
+        'kegiatan' => $kegiatan,
+        'lpj' => $lpj
+    ]);
+}
+public function view_lpj($id_kegiatan)
+{
+    $model = new M_absen();
+
+    $data['lpj'] = $model->getWhere('lpj', ['id_kegiatan' => $id_kegiatan])->getRow();
+
+    if (!$data['lpj']) {
+        return redirect()->to('kegiatan')->with('error', 'LPJ tidak ditemukan.');
+    }
+
+    echo view('header');
+    echo view('view_lpj', $data); // ini langsung tampilin LPJ-nya
+    echo view('footer');
+}
+
+public function buat($id_kegiatan)
+    {
+        $lpjModel = new LpjModel();
+        $itemModel = new LpjItemModel();
+
+        // Cek apakah LPJ udah ada
+        $lpj = $lpjModel->where('id_kegiatan', $id_kegiatan)->first();
+        if ($lpj) {
+            $items = $itemModel->where('id_lpj', $lpj['id_lpj'])->findAll();
+        } else {
+            $lpj = null;
+            $items = [];
+        }
+
+        return view('home/form', [
+            'id_kegiatan' => $id_kegiatan,
+            'lpj' => $lpj,
+            'items' => $items
+        ]);
+    }
+
+    public function simpan()
+    {
+        $lpjModel = new LpjModel();
+        $itemModel = new LpjItemModel();
+
+        $id_kegiatan = $this->request->getPost('id_kegiatan');
+        $bendahara_id = session()->get('id'); // asumsi login
+
+        // Buat LPJ kalau belum ada
+        $lpj = $lpjModel->where('id_kegiatan', $id_kegiatan)->first();
+        if (!$lpj) {
+            $lpj_id = $lpjModel->insert([
+                'id_kegiatan' => $id_kegiatan,
+                'id_bendahara' => $bendahara_id
+            ]);
+        } else {
+            $lpj_id = $lpj['id_lpj'];
+        }
+
+        // Simpan item LPJ
+        $tipe = $this->request->getPost('tipe');
+        $jumlah = $this->request->getPost('jumlah');
+        $sumber = $this->request->getPost('sumber');
+        $penggunaan = $this->request->getPost('penggunaan');
+
+        for ($i = 0; $i < count($tipe); $i++) {
+            $itemModel->save([
+                'id_lpj' => $lpj_id,
+                'tipe' => $tipe[$i],
+                'jumlah' => $jumlah[$i],
+                'sumber' => $tipe[$i] == 'masuk' ? $sumber[$i] : null,
+                'penggunaan' => $tipe[$i] == 'keluar' ? $penggunaan[$i] : null,
+            ]);
+        }
+
+        return redirect()->to('/home/buat/' . $id_kegiatan)->with('success', 'LPJ berhasil disimpan.');
+    }
+	public function cetakPdf($id_kegiatan)
+{
+    $lpjModel = new \App\Models\LpjModel();
+    $itemModel = new \App\Models\LpjItemModel();
+    $kegiatanModel = new \App\Models\KegiatanModel();
+
+    $kegiatan = $kegiatanModel->find($id_kegiatan);
+    $lpj = $lpjModel->where('id_kegiatan', $id_kegiatan)->first();
+    $items = [];
+
+    if ($lpj) {
+        $items = $itemModel->where('id_lpj', $lpj['id_lpj'])->findAll();
+    }
+
+    $html = view('home/pdf', [
+        'kegiatan' => $kegiatan,
+        'items' => $items
+    ]);
+
+    $dompdf = new Dompdf();
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'portrait');
+    $dompdf->render();
+    $dompdf->stream("LPJ_{$kegiatan['judul_kegiatan']}.pdf", ["Attachment" => false]);
+}
 	public function kelas()
   {
     if (session()->get('level')==1 || session()->get('level')==2 || session()->get('level')=='4'){ 

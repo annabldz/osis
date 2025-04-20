@@ -1,5 +1,5 @@
 {
-	"name": "codeigniter4/framework",
+	"name": "manajemen-osis/project",
 	"type": "project",
 	"description": "The CodeIgniter framework v4",
 	"homepage": "https://codeigniter.com",
@@ -17,7 +17,7 @@
 		"laminas/laminas-escaper": "^2.6",
 		"psr/log": "^1.1",
 		"tecnickcom/tcpdf": "^6.7",
-		"dompdf/dompdf": "^3.0",
+		"dompdf/dompdf": "^3.1",
 		"phpoffice/phpspreadsheet": "^1.29",
 		"endroid/qr-code": "^4.6",
 		"phpmailer/phpmailer": "^6.9"

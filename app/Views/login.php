@@ -121,7 +121,7 @@
                   </div>
                   <div class="g-recaptcha" data-sitekey="6LfA0g0rAAAAAPfgPJmrXOBiSaHxxmDIUjM9bTcW">
                     </div>
-                    <div class="input-group input-group-outline mb-3" id="math-captcha">
+                    <div class=" mb-3" id="math-captcha">
                       <label for="captcha_jawaban" class="form-label">Berapakah hasil dari <?= $soal_captcha ?>?</label>
                       <input type="text" name="captcha_jawaban" id="captcha_jawaban"  class="form-control" required>
                     </div>

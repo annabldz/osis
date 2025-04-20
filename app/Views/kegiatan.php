@@ -14,7 +14,7 @@
   .deskripsi-wrapper a:hover {
     text-decoration: underline;
   }
-  
+
 #calendar {
     max-width: 900px;
     margin: 40px auto;
@@ -25,168 +25,453 @@
 }
 </style>
 
-    <div class="row">
-            <div class="col-12">
-            <div class="card my-4">
-                <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
-                <div class="bg-gradient-dark shadow-dark border-radius-lg pt-4 pb-3">
-                    <h6 class="text-white text-capitalize ps-3">DATA KEGIATAN OSIS</h6>
-                </div>
-                </div>
-                <div class="card-body px-3 pb-2">
-                <div class="table-responsive p-0">
-                    <table class="table align-items-center justify-content-center mb-0">
-                    <button class="btn btn-success mb-3"><a href="/home/inputkegiatan" class="text-white"
+<div class="row">
+  <div class="col-12">
+  <?php if(session()->getFlashdata('success')): ?>
+    <div class="alert alert-success">
+        <?= session()->getFlashdata('success') ?>
+    </div>
+<?php endif; ?>
+
+    <div class="card my-4">
+      <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
+        <div class="bg-gradient-dark shadow-dark border-radius-lg pt-4 pb-3">
+          <h6 class="text-white text-capitalize ps-3">DATA KEGIATAN OSIS</h6>
+        </div>
+      </div>
+      
+      <div class="card-body px-3 pb-2">
+      <button class="btn btn-success mb-3"><a href="/home/inputkegiatan" class="text-white"
                     onclick="return confirm('Apakah Anda yakin ingin menambah data kegiatan?')">
                     <i class="material-symbols-rounded opacity-100">add_2</i> Tambah Kegiatan OSIS
                     </a></button>
-                    <thead>
-                        <tr>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">No</th>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Bagian Proker</th>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Nama Kegiatan</th>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Tanggal Kegiatan</th>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Waktu</th>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Lokasi</th>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Proposal</th>
-                        <!-- <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Hasil Dokumentasi</th> -->
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
-                        <?php
-                    if (session()->get('level')==7){ ?>
-                        <th class="text-uppercase text-secondary text-xxs font-weight-bolder opacity-7 ps-2">Aksi</th>
-                        <?php } ?>
-                        <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php 
-                        $ms = 1;
-                        foreach ($anjas as $key => $value) {
-                            ?>
-                        <tr>
-                        <th scope="row" align="center"><?= $ms++ ?></th>
-                        <td><?= $value->judul_proker ?></td>
-                        <td><?= $value->judul_kegiatan ?></td>
-                        <td><?= $value->tanggal_kegiatan ?></td>
-                        <td><?= $value->waktu ?></td>
-                        <td><?= $value->lokasi ?></td>
-                                        
-                          <td>
-                            <?php if ($value->proposal_file): ?>
-                                <a href="<?= base_url('uploads/proposal/' . $value->proposal_file) ?>" 
-                                target="_blank" 
-                                class="badge bg-primary text-white" 
-                                style="text-decoration: none;">
-                                 Lihat
-                                </a>
-                            <?php else: ?>  
-                                <span class="badge bg-secondary">Belum ada</span>
-                            <?php endif; ?>
-                        </td>
-                        <!-- <td>
-                            <?php if (!empty($value->link_drive)): ?>
-                                <a href="<?= $value->link_drive ?>" target="_blank" class="btn btn-primary btn-sm">
-                                    <i class="material-symbols-rounded" style="font-size:16px; vertical-align:middle;">visibility</i> Lihat
-                                </a>
-                            <?php else: ?>
-                                <span class="badge bg-info">Belum ada</span>
-                            <?php endif; ?>
-                        </td> -->
+        <ul class="nav nav-pills" id="statusTab" role="tablist">
+          <li class="nav-item" role="presentation">
+            <a class="nav-link active" id="waitingTab" data-bs-toggle="pill" href="#waiting" role="tab" aria-controls="waiting" aria-selected="true">Menunggu Persetujuan</a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a class="nav-link" id="runningTab" data-bs-toggle="pill" href="#running" role="tab" aria-controls="running" aria-selected="false">Berjalan</a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a class="nav-link" id="completedTab" data-bs-toggle="pill" href="#completed" role="tab" aria-controls="completed" aria-selected="false">Selesai</a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a class="nav-link" id="rejectedTab" data-bs-toggle="pill" href="#rejected" role="tab" aria-controls="rejected" aria-selected="false">Ditolak</a>
+          </li>
+        </ul>
 
-
-                          
-                        <td>
-                            <?php
-                                $status = $value->status_kegiatan;
-                                $badgeClass = '';
-
-                                if ($status == 'Menunggu Persetujuan') {
-                                $badgeClass = 'badge bg-warning text-dark';
-
-                                } elseif ($status == 'Berjalan') {
-                                $badgeClass = 'badge bg-info';
-
-                                } elseif ($status == 'Selesai') {
-                                $badgeClass = 'badge bg-success';
-
-                                } elseif ($status == 'Ditolak' || $status == 'Ditolak') {
-                                $badgeClass = 'badge bg-danger';
-                                }
-                            ?>
-                            <span class="<?= $badgeClass ?>"><?= $status ?></span>
-                        </td>
-                        <?php
-                    if (session()->get('level')==7){ ?>
-                        <td>
-                        <?php if ($value->status_kegiatan == 'Menunggu Persetujuan'): ?>
-                            <a href="<?= base_url('home/setujui_kegiatan/'.$value->id_kegiatan) ?>" 
-                            class="btn btn-success mt-1" 
-                            onclick="return confirm('Setujui proposal ini dan ubah status jadi Berjalan?')">
+        <div class="tab-content" id="statusTabContent">
+          <!-- Menunggu Persetujuan -->
+          <div class="tab-pane fade show active" id="waiting" role="tabpanel" aria-labelledby="waitingTab">
+            <div class="table-responsive p-0">
+              <table class="table align-items-center justify-content-center mb-0">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Bagian Proker</th>
+                    <th>Nama Kegiatan</th>
+                    <th>Tanggal Kegiatan</th>
+                    <th>Waktu</th>
+                    <th>Lokasi</th>
+                    <th>Proposal</th>
+                    <th>Komentar</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php 
+                  $ms = 1;
+                  foreach ($anjas as $key => $value):
+                    if ($value->status_kegiatan == 'Menunggu Persetujuan'):
+                  ?>
+                    <tr>
+                      <th scope="row" align="center"><?= $ms++ ?></th>
+                      <td><?= $value->judul_proker ?></td>
+                      <td><?= $value->judul_kegiatan ?></td>
+                      <td><?= $value->tanggal_kegiatan ?></td>
+                      <td><?= $value->waktu ?></td>
+                      <td><?= $value->lokasi ?></td>
+                      <td>
+                        <?php if ($value->proposal_file): ?>
+                          <a href="<?= base_url('uploads/proposal/' . $value->proposal_file) ?>" target="_blank" class="badge bg-primary text-white">Lihat</a>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <?php if ($value->komentar): ?>
+                          <?= $value->komentar ?>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <span class="badge bg-warning text-dark"><?= $value->status_kegiatan ?></span>
+                      </td>
+                      <td>
+                      <?php if ($value->status_kegiatan == 'Menunggu Persetujuan'): ?>
+                        <!-- Tombol buka modal komentar -->
+                        <button class="btn btn-success mt-1" data-bs-toggle="modal" data-bs-target="#komentarModal<?= $value->id_kegiatan ?>" onclick="setAksi('setujui', <?= $value->id_kegiatan ?>)">
                             <i class="material-symbols-rounded opacity-100">check_circle</i> Setujui
-                            </a>
-                            <a href="<?= base_url('home/tolakproposal/'.$value->id_kegiatan) ?>" 
-                            class="btn btn-danger mt-1" 
-                            onclick="return confirm('Yakin ingin menolak proposal ini?')">
+                        </button>
+                        <button class="btn btn-danger mt-1" data-bs-toggle="modal" data-bs-target="#komentarModal<?= $value->id_kegiatan ?>" onclick="setAksi('tolak', <?= $value->id_kegiatan ?>)">
                             <i class="material-symbols-rounded opacity-100">cancel</i> Tolak
-                            </a>
-                            <?php endif; ?>
+                        </button>
 
-                            <?php if ($value->status_kegiatan == 'Berjalan'): ?>
-                                <a href="<?= base_url ('home/selesaikankegiatan/' .$value->id_kegiatan)?>" class="btn btn-info" onclick="return confirm('Apakah Anda yakin ingin menyelesaikan kegiatan ini?')">
-                                <i class="material-symbols-rounded">done_all</i> Selesaikan
-                                </a>
-                            <?php endif; ?>
-
+                        <div class="modal fade" id="komentarModal<?= $value->id_kegiatan ?>" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="post" action="<?= base_url('/home/proses_kegiatan/' . $value->id_kegiatan) ?>">
+      <input type="hidden" name="aksi" id="aksiField<?= $value->id_kegiatan ?>">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Tulis Komentar</h5>
+        </div>
+        <div class="modal-body">
+          <textarea name="komentar" class="form-control" placeholder="Tulis komentar sebelum memproses..." required></textarea> 
                         
-                        <!-- <a href="<?= base_url('home/editkegiatan/'.$value->id_kegiatan)?>" class="btn btn-warning" onclick="return confirm('Apakah Anda yakin ingin mengedit data ini?')">
-                        <i class="material-symbols-rounded opacity-100">border_color</i>
-                        </a> -->
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Kirim</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+                    <?php endif; ?>
 
-                        </td>
-                        <?php } ?>
-                        </tr>
-                        <?php } ?>
-                    </tbody>
-                    </table>
-                </div>
-                </div>
-            </div>
-            </div>
-                        </div>
+                  
 
+                        <!-- <button class="btn btn-success mt-1" data-bs-toggle="modal" data-bs-target="#komentarModal<?= $value->id_kegiatan ?>" onclick="setAksi('setujui', <?= $value->id_kegiatan ?>)">
+                          <i class="material-symbols-rounded opacity-100">check_circle</i> Setujui
+                        </button>
+                        <button class="btn btn-danger mt-1" data-bs-toggle="modal" data-bs-target="#komentarModal<?= $value->id_kegiatan ?>" onclick="setAksi('tolak', <?= $value->id_kegiatan ?>)">
+                          <i class="material-symbols-rounded opacity-100">cancel</i> Tolak
+                        </button> -->
+                      </td>
+                    </tr>
+                  <?php endif; endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Berjalan -->
+          <div class="tab-pane fade" id="running" role="tabpanel" aria-labelledby="runningTab">
+            <div class="table-responsive p-0">
+              <table class="table align-items-center justify-content-center mb-0">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Bagian Proker</th>
+                    <th>Nama Kegiatan</th>
+                    <th>Tanggal Kegiatan</th>
+                    <th>Waktu</th>
+                    <th>Lokasi</th>
+                    <th>Proposal</th>
+                    <th>Komentar</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php 
+                  $ms = 1;
+                  foreach ($anjas as $key => $value):
+                    if ($value->status_kegiatan == 'Berjalan'):
+                  ?>
+                    <tr>
+                      <th scope="row" align="center"><?= $ms++ ?></th>
+                      <td><?= $value->judul_proker ?></td>
+                      <td><?= $value->judul_kegiatan ?></td>
+                      <td><?= $value->tanggal_kegiatan ?></td>
+                      <td><?= $value->waktu ?></td>
+                      <td><?= $value->lokasi ?></td>
+                      <td>
+                        <?php if ($value->proposal_file): ?>
+                          <a href="<?= base_url('uploads/proposal/' . $value->proposal_file) ?>" target="_blank" class="badge bg-primary text-white">Lihat</a>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <?php if ($value->komentar): ?>
+                          <?= $value->komentar ?>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <span class="badge bg-info"><?= $value->status_kegiatan ?></span>
+                      </td>
+                      <!-- Tampilkan link LPJ jika status kegiatan sudah selesai -->
+                   
+                      <td>
+                      <?php if ($value->status_kegiatan == 'Berjalan'): ?>
+                        <!-- Selesaikan langsung (atau bisa pakai modal juga jika mau) -->
+                        <!-- <button class="btn btn-info mt-1" data-bs-toggle="modal" data-bs-target="#komentarModal<?= $value->id_kegiatan ?>" onclick="setAksi('selesai', <?= $value->id_kegiatan ?>)">
+                            <i class="material-symbols-rounded">done_all</i> Selesaikan
+                        </button> -->
+                        <!-- <a href="<?= base_url('home/input_lpj/' . $value->id_kegiatan); ?>" class="btn btn-success">Selesaikan</a> -->
+                        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalLPJ<?= $value->id_kegiatan ?>" data-id="<?= $value->id_kegiatan ?>"> Selesaikan </button>
+
+                    <?php endif; ?>
+                        <!-- <button class="btn btn-info mt-1" data-bs-toggle="modal" data-bs-target="#komentarModal<?= $value->id_kegiatan ?>" onclick="setAksi('selesai', <?= $value->id_kegiatan ?>)">
+                          <i class="material-symbols-rounded">done_all</i> Selesaikan
+                        </button> -->
+                        <!-- Di dalam foreach running kegiatan -->
+<div class="modal fade" id="modalLPJ<?= $value->id_kegiatan ?>" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form action="<?= base_url('home/proses_lpj/' . $value->id_kegiatan) ?>" method="post" enctype="multipart/form-data">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Input LPJ - <?= $value->judul_kegiatan ?></h5>
+        </div>
+        <div class="modal-body">
+          <div id="lpj-rows-<?= $value->id_kegiatan ?>">
+            <div class="row mb-2">
+              <div class="col-md-4">
+                <select name="tipe[]" class="form-control" onchange="toggleFields(this)">
+                  <option value="">Pilih Tipe</option>
+                  <option value="Pemasukan">Pemasukan</option>
+                  <option value="Pengeluaran">Pengeluaran</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <input type="text" name="jumlah[]" class="form-control format-rupiah" placeholder="Jumlah (Rp)" required>
+              </div>
+              <div class="col-md-3 sumber-field">
+                <input type="text" name="sumber[]" class="form-control" placeholder="Sumber">
+              </div>
+
+              <div class="col-md-3 penggunaan-field d-none">
+                <input type="text" name="penggunaan[]" class="form-control" placeholder="Penggunaan">
+              </div>
+              <div class="col-md-4 bukti-field">
+                <input type="file" name="bukti[]" class="form-control" placeholder="Bukti">
+              </div>
+              <div class="col-md-4 tanggal-field">
+                <input type="date" name="tanggal[]" class="form-control" placeholder="Tanggal">
+              </div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-secondary" onclick="tambahBarisLPJ(<?= $value->id_kegiatan ?>)">+ Tambah Baris</button>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Simpan & Selesaikan</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+                      </td>
+                    </tr>
+                  <?php endif; endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Selesai -->
+          <div class="tab-pane fade" id="completed" role="tabpanel" aria-labelledby="completedTab">
+            <div class="table-responsive p-0">
+              <table class="table align-items-center justify-content-center mb-0">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Bagian Proker</th>
+                    <th>Nama Kegiatan</th>
+                    <th>Tanggal Kegiatan</th>
+                    <th>Waktu</th>
+                    <th>Lokasi</th>
+                    <th>Proposal</th>
+                    <th>Komentar</th>
+                    <th>Status</th>
+                    <th>LPJ</th>
+
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php 
+                  $ms = 1;
+                  foreach ($anjas as $key => $value):
+                    if ($value->status_kegiatan == 'Selesai'):
+                  ?>
+                    <tr>
+                      <th scope="row" align="center"><?= $ms++ ?></th>
+                      <td><?= $value->judul_proker ?></td>
+                      <td><?= $value->judul_kegiatan ?></td>
+                      <td><?= $value->tanggal_kegiatan ?></td>
+                      <td><?= $value->waktu ?></td>
+                      <td><?= $value->lokasi ?></td>
+                      <td>
+                        <?php if ($value->proposal_file): ?>
+                          <a href="<?= base_url('uploads/proposal/' . $value->proposal_file) ?>" target="_blank" class="badge bg-primary text-white">Lihat</a>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <?php if ($value->komentar): ?>
+                          <?= $value->komentar ?>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      
+                      <td>
+                        <span class="badge bg-success"><?= $value->status_kegiatan ?></span>
+                      </td>
+                      <td>
+                      <?php if ($value->status_kegiatan == 'Selesai'): ?>
+                        <a href="<?= base_url('home/perKegiatan/' . $value->id_kegiatan) ?>">
+                            Lihat LPJ
+                        </a>
+                      <?php endif; ?>
+                              </td>
+                    </tr>
+                  <?php endif; endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Ditolak -->
+          <div class="tab-pane fade" id="rejected" role="tabpanel" aria-labelledby="rejectedTab">
+            <div class="table-responsive p-0">
+              <table class="table align-items-center justify-content-center mb-0">
+                <thead>
+                  <tr>
+                    <th>No</th>
+                    <th>Bagian Proker</th>
+                    <th>Nama Kegiatan</th>
+                    <th>Tanggal Kegiatan</th>
+                    <th>Waktu</th>
+                    <th>Lokasi</th>
+                    <th>Proposal</th>
+                    <th>Komentar</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php 
+                  $ms = 1;
+                  foreach ($anjas as $key => $value):
+                    if ($value->status_kegiatan == 'Ditolak'):
+                  ?>
+                    <tr>
+                      <th scope="row" align="center"><?= $ms++ ?></th>
+                      <td><?= $value->judul_proker ?></td>
+                      <td><?= $value->judul_kegiatan ?></td>
+                      <td><?= $value->tanggal_kegiatan ?></td>
+                      <td><?= $value->waktu ?></td>
+                      <td><?= $value->lokasi ?></td>
+                      <td>
+                        <?php if ($value->proposal_file): ?>
+                          <a href="<?= base_url('uploads/proposal/' . $value->proposal_file) ?>" target="_blank" class="badge bg-primary text-white">Lihat</a>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <?php if ($value->komentar): ?>
+                          <?= $value->komentar ?>
+                        <?php else: ?>  
+                          <span class="badge bg-secondary">Belum ada</span>
+                        <?php endif; ?>
+                      </td>
+                      <td>
+                        <span class="badge bg-danger"><?= $value->status_kegiatan ?></span>
+                      </td>
+                    </tr>
+                  <?php endif; endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal Komentar -->
 
 <script>
-  document.querySelectorAll('.selesai-btn').forEach(button => {
-    button.addEventListener('click', function () {
-      const idKegiatan = this.dataset.id;
-      const judul = this.dataset.judul;
-      const idProker = this.dataset.idproker;
-
-      document.getElementById('id_kegiatan').value = idKegiatan;
-      document.getElementById('id_proker').value = idProker;
-      document.getElementById('judul_dokumentasi').value = judul;
-    });
+  // Biar id_kegiatan masuk ke form saat tombol diklik
+  const modalLPJ = document.getElementById('modalLPJ');
+  modalLPJ.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const id = button.getAttribute('data-id');
+    modalLPJ.querySelector('#id_kegiatan').value = id;
   });
 </script>
-<!-- 
-<div id='calendar'></div>
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    var calendarEl = document.getElementById('calendar');
+  function setAksi(aksi, id) {
+    document.getElementById('aksiField' + id).value = aksi;
+  }
+</script>
 
-    var calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        events: '/kegiatan/getKalender', // endpoint yang nanti kamu buat
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,listWeek'
-        },
-        eventClick: function(info) {
-            alert('Kegiatan: ' + info.event.title);
-        }
-    });
+<script>
 
-    calendar.render();
+function toggleFields(select) {
+    const row = select.closest('.row');
+    row.querySelector('.sumber-field').classList.toggle('d-none', select.value === 'Pengeluaran');
+    row.querySelector('.penggunaan-field').classList.toggle('d-none', select.value === 'Pemasukan');
+}
+
+</script>
+<script>
+function tambahBarisLPJ(id) {
+  const wrapper = document.getElementById('lpj-rows-' + id);
+  const row = document.createElement('div');
+  row.className = 'row mb-2';
+  row.innerHTML = `
+    <div class="col-md-4">
+      <select name="tipe[]" class="form-control" onchange="toggleFields(this)" required>
+        <option value="">Pilih Tipe</option>
+        <option value="Pemasukan">Pemasukan</option>
+        <option value="Pengeluaran">Pengeluaran</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <input type="text" name="jumlah[]" class="form-control format-rupiah" placeholder="Jumlah (Rp)" required>
+    </div>
+    <div class="col-md-3 sumber-field">
+      <input type="text" name="sumber[]" class="form-control" placeholder="Sumber">
+    </div>
+    <div class="col-md-3 penggunaan-field d-none">
+      <input type="text" name="penggunaan[]" class="form-control" placeholder="Penggunaan">
+    </div>
+    <div class="col-md-4 bukti-field">
+      <input type="file" name="bukti[]" class="form-control" placeholder="Bukti">
+    </div>
+    <div class="col-md-4 tanggal-field">
+      <input type="date" name="tanggal[]" class="form-control" placeholder="Tanggal">
+    </div>
+  `;
+  function hapusBaris(btn) {
+  const row = btn.closest('.row');
+  if (row) {
+    row.remove();
+  }
+}
+
+  wrapper.appendChild(row);
+}
+
+</script>
+<script>
+document.addEventListener('input', function(e) {
+  if (e.target.classList.contains('format-rupiah')) {
+    let value = e.target.value.replace(/\D/g, '');
+    e.target.value = formatRupiah(value);
+  }
 });
-</script> -->
+
+function formatRupiah(angka) {
+  return angka.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+</script>

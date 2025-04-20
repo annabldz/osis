@@ -74,7 +74,7 @@ public function getUsersWithCreator()
 
 		public function tampil($table,$by){
 		return $this->db->table($table)
-						->orderby($by,'asc')
+						->orderby($by,'desc')
 						->get()
 						->getResult();
 	}
@@ -134,10 +134,29 @@ public function getUsersWithCreator()
 	}
 	public function join($table, $table2, $on){
 		return $this->db->table($table)
-						->join($table2,$on)
+						->join($table2, $on)
+						->orderBy('created_at', 'DESC') // Tambahkan ini
 						->get()
 						->getResult();
 	}
+	public function proker(){
+		return $this->db->table('proker')
+						->join('kegiatan', 'kegiatan.id_proker=proker.id_proker', 'left')
+						
+						->orderBy('proker.id_proker', 'DESC') // Tambahkan ini
+						->get()
+						->getResult();
+	}
+	public function kegiatan(){
+		return $this->db->table('kegiatan')
+						->join('proker', 'kegiatan.id_proker=proker.id_proker')
+						// ->join('lpj', 'lpj.id_kegiatan=kegiatan.id_kegiatan', 'left')
+						->orderBy('kegiatan.id_kegiatan', 'DESC') // Tambahkan ini
+						->get()
+						->getResult();
+						
+	}
+	
 	public function join2($table, $table2, $table3, $on, $on2){
 		return $this->db->table($table)
 						->join($table2,$on)

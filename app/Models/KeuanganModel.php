@@ -9,4 +9,10 @@ class KeuanganModel extends Model
     protected $table = 'keuangan';
     protected $primaryKey = 'id_keuangan';
     protected $allowedFields = ['tanggal', 'keterangan', 'tipe', 'jumlah', 'nota'];
+
+
+public function getAllDesc()
+{
+    return $this->orderBy('tanggal', 'DESC')->findAll();
+}
 }
